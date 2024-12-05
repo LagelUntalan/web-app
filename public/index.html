@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Items List</title>
+    <style>
+        /* Basic styles for the page */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+        button {
+            padding: 10px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        ul {
+            list-style-type: none;
+        }
+        li {
+            background: #f9f9f9;
+            margin: 10px 0;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Items</h1>
+    <button onclick="showAddModal()">Add Item</button>
+    <ul id="itemList"></ul>
+
+    <!-- Modal for Adding/Editing Item -->
+    <div id="modalOverlay" style="display:none;">
+        <div>
+            <h2 id="modalTitle">Add Item</h2>
+            <input type="text" id="itemName" placeholder="Item Name" required>
+            <input type="text" id="itemDescription" placeholder="Description">
+            <button id="modalSaveButton" onclick="saveItem()">Save</button>
+            <button onclick="closeModal()">Cancel</button>
+        </div>
+    </div>
+
+    <script>
+        let editItemId = null;
+
+        // Fetch items from the API and display them
+        async function getItems() {
+            const response = await fetch('http://localhost:5000/api/items');
+            const items = await response.json();
+            const itemList = document.getElementById('itemList');
+            itemList.innerHTML = '';
+            items.forEach(item => {
+                itemList.innerHTML += `
+                    <li>
+                        ${item.name} - ${item.description}
+                        <button onclick="showEditModal(${item.id}, '${item.name}', '${item.description}')">Edit</button>
+                        <button onclick="deleteItem(${item.id})">Delete</button>
+                    </li>
+                `;
+            });
+        }
+
+        function showAddModal() {
+            document.getElementById('modalTitle').textContent = 'Add Item';
+            document.getElementById('itemName').value = '';
+            document.getElementById('itemDescription').value = '';
+            document.getElementById('modalSaveButton').textContent = 'Add Item';
+            editItemId = null;
+            document.getElementById('modalOverlay').style.display = 'block';
+        }
+
+        function showEditModal(id, name, description) {
+            document.getElementById('modalTitle').textContent = 'Edit Item';
+            document.getElementById('itemName').value = name;
+            document.getElementById('itemDescription').value = description;
+            document.getElementById('modalSaveButton').textContent = 'Save Changes';
+            editItemId = id;
+            document.getElementById('modalOverlay').style.display = 'block';
+        }
+
+        async function saveItem() {
+            const name = document.getElementById('itemName').value;
+            const description = document.getElementById('itemDescription').value;
+
+            if (editItemId) {
+                // Update item
+                await fetch(`http://localhost:5000/api/items/${editItemId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, description })
+                });
+            } else {
+                // Add new item
+                await fetch('http://localhost:5000/api/items', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, description })
+                });
+            }
+
+            closeModal();
+            getItems(); // Refresh list
+        }
+
+        async function deleteItem(id) {
+            await fetch(`http://localhost:5000/api/items/${id}`, {
+                method: 'DELETE'
+            });
+            getItems(); // Refresh list after deletion
+        }
+
+        function closeModal() {
+            document.getElementById('modalOverlay').style.display = 'none';
+        }
+
+        window.onload = getItems; // Load items when the page is loaded
+    </script>
+
+</body>
+</html>
